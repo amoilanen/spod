@@ -6,7 +6,7 @@ Basic functionality:
 
 Refinement:
 
-- Already download episodes will not be downloaded twice
+- Already downloaded episodes will not be downloaded twice
 - It is possible to display detailed progress information about the RSS feed processing (and file download)
 - It is possible to pass both the RSS feed URL and the destination directory for storing the episodes to the running app
 - It is possible to configure podcasts which should be downloaded via a configuration YAML or JSON file
