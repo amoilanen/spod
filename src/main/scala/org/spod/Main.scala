@@ -1,5 +1,9 @@
-import org.spod.error.FeedFormatError
+package org.spod
+
+import cats.data.NonEmptyList
+import org.spod.error.SPodError
 import org.spod.rss.{RSSFeed, RSSFeedParser}
+import zio.{UIO, Runtime}
 
 object Main extends App {
 
@@ -27,6 +31,10 @@ object Main extends App {
       |</rss>
       |""".stripMargin
 
-  val parsedFeed = RSSFeedParser.parse(feed)
-  println(parsedFeed)
+  val runtime = Runtime.default
+  val parsedFeed: UIO[Either[NonEmptyList[SPodError], RSSFeed]] =
+    RSSFeedParser.parse(feed).provideLayer(RSSFeedParser.live).either
+
+  val result = runtime.unsafeRun(parsedFeed)
+  println(result)
 }

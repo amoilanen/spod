@@ -12,10 +12,10 @@ import scala.xml.Node
 import java.text.SimpleDateFormat
 
 case class RSSItem(
-  title: String,
-  description: String,
-  link: URL,
-  publicationDate: Instant
+    title: String,
+    description: String,
+    link: URL,
+    publicationDate: Instant
 )
 
 object RSSItem {
@@ -25,9 +25,14 @@ object RSSItem {
   def from(xml: Node): ParsingResult[RSSItem] = {
     val title = (xml \ "title").text
     val description = (xml \ "description").text
-    val linkResult = Try(new URL((xml \ "link").text)).toEither.left.map(FeedFormatError(_)).toValidatedNel
-    val pubDateResult = Try(pubDateFormat.parse((xml \ "pubDate").text).toInstant).toEither.left.map(FeedFormatError(_)).toValidatedNel
-    (linkResult,
-     pubDateResult).mapN({ case (link, pubDate) => RSSItem(title, description, link, pubDate) })
+    val linkResult = Try(new URL((xml \ "link").text)).toEither.left
+      .map(FeedFormatError(_))
+      .toValidatedNel
+    val pubDateResult = Try(
+      pubDateFormat.parse((xml \ "pubDate").text).toInstant
+    ).toEither.left.map(FeedFormatError(_)).toValidatedNel
+    (linkResult, pubDateResult).mapN({
+      case (link, pubDate) => RSSItem(title, description, link, pubDate)
+    })
   }
 }
