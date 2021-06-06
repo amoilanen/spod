@@ -4,8 +4,7 @@ import org.spod.rss.{RSSFeed, RSSFeedParser}
 object Main extends App {
 
   val feed =
-    """
-      |<?xml version="1.0" encoding="UTF-8" ?>
+    """<?xml version="1.0" encoding="UTF-8" ?>
       |<rss version="2.0">
       |<channel>
       | <title>RSS Title</title>

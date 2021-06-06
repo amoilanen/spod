@@ -9,7 +9,9 @@ lazy val root = (project in file("."))
   .settings(
     name := "SPod",
     libraryDependencies ++= Seq(
-      scalaTest % Test
+      scalaTest % Test,
+      "org.typelevel" %% "cats-core" % "2.3.0",
+      "com.lucidchart" %% "xtract" % "2.2.1"
     )
   )
 
