@@ -13,6 +13,7 @@ lazy val root = (project in file("."))
     name := "SPod",
     libraryDependencies ++= Seq(
       scalaTest % Test,
+      "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % "3.3.6",
       "org.scala-lang.modules" %% "scala-xml" % "2.0.0",
       "org.typelevel" %% "cats-core" % catsVersion,
       "dev.zio" %% "zio" % zioVersion

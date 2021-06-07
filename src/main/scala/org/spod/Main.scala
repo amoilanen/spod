@@ -1,9 +1,11 @@
 package org.spod
 
-import cats.data.NonEmptyList
-import org.spod.error.SPodError
-import org.spod.rss.{RSSFeed, RSSFeedParser}
-import zio.{UIO, Runtime}
+import java.net.URL
+
+import org.spod.error.{FeedParserError, SPodError}
+import org.spod.rss.{RSSClient, RSSFeed, RSSFeedParser}
+import zio.{Runtime, UIO, URIO}
+import sttp.client3.httpclient.zio.HttpClientZioBackend
 
 object Main extends App {
 
@@ -32,9 +34,19 @@ object Main extends App {
       |""".stripMargin
 
   val runtime = Runtime.default
-  val parsedFeed: UIO[Either[NonEmptyList[SPodError], RSSFeed]] =
+  val parsedFeed: UIO[Either[FeedParserError, RSSFeed]] =
     RSSFeedParser.parse(feed).provideLayer(RSSFeedParser.live).either
 
-  val result = runtime.unsafeRun(parsedFeed)
-  println(result)
+  val feedParsingResult = runtime.unsafeRun(parsedFeed)
+  println(feedParsingResult)
+
+  val url = new URL("http://feeds.bbci.co.uk/news/world/rss.xml")
+  val rssClientEnv =
+    (RSSFeedParser.live ++ HttpClientZioBackend.layer()) >>> RSSClient.live
+
+  val parsedFetchFeed: UIO[Either[Throwable, RSSFeed]] =
+    RSSClient.fetchFeed(url).provideLayer(rssClientEnv).either
+
+  val feedFetchingAndParsingResult = runtime.unsafeRun(parsedFetchFeed)
+  println(feedFetchingAndParsingResult)
 }
