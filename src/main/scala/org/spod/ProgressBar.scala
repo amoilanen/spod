@@ -1,24 +1,15 @@
 package org.spod
 
-class ProgressBar(total: Int, barWidth: Int = 150) {
-  def printProgress(completed: Int): Unit = {
-    val completedPercent = (100 * completed) / total
-    val completedWidth = (completedPercent * barWidth) / 100
-    val progressValue = "*" * completedWidth + " " * (barWidth - completedWidth)
-    val percent = 100 * (completed.toDouble / total.toDouble)
-    val formattedPercent = f"$percent%2.2f"
-
-    val progressDisplay = s"[$progressValue] $formattedPercent%\r"
-    print(progressDisplay)
-  }
-}
+import org.spod.progress.ProgressBar
+import zio.Runtime
 
 object ProgressBar extends App {
 
+  val runtime = Runtime.default
   val maxValue = 2143
   val progressBar = new ProgressBar(maxValue)
-  (0 to maxValue).foreach(percent => {
+  (0 to maxValue).foreach(currentProgress => {
     Thread.sleep(10)
-    progressBar.printProgress(percent)
+    runtime.unsafeRun(progressBar.printProgress(currentProgress))
   })
 }
