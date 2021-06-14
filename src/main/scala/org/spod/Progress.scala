@@ -3,7 +3,7 @@ package org.spod
 import org.spod.progress.ProgressBar
 import zio.Runtime
 
-object ProgressBar extends App {
+object Progress extends App {
 
   val runtime = Runtime.default
   val maxValue = 2143

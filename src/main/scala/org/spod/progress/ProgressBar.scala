@@ -19,7 +19,8 @@ class ProgressBar(total: Int, barWidth: Int = 150) {
   }
 
   def printProgress(completed: Int): ZIO[Console, IOException, Unit] = {
-    val formattedProgress = s"${formatProgressBar(completed)} ${formatCompletedPercent(completed)}%\r"
+    val formattedProgress =
+      s"${formatProgressBar(completed)} ${formatCompletedPercent(completed)}%\r"
     putStr(formattedProgress)
   }
 }
