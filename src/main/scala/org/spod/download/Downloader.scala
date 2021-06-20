@@ -1,15 +1,12 @@
 package org.spod.download
 
-import java.io.File
+import java.io.{BufferedInputStream, BufferedOutputStream, File, FileOutputStream, IOException}
 import java.net.URL
 
 import org.spod.error.SPodError
 import sttp.client3.httpclient.zio.SttpClient
-import zio.{Has, IO, ZIO, ZLayer}
+import zio.{Has, IO, ZIO, ZLayer, ZManaged}
 import zio.console.Console
-import java.io.BufferedInputStream
-import java.io.FileOutputStream
-import java.io.IOException
 
 object Downloader {
 
@@ -26,37 +23,40 @@ object Downloader {
       .fromServices[Console.Service, SttpClient.Service, Downloader.Service] {
         (console, sttpClient) =>
           new Service {
+
+            private def inputStream(link: URL): ZManaged[Any, Throwable, BufferedInputStream] =
+              ZManaged.make(ZIO.effect(new BufferedInputStream(link.openStream())))(
+                stream => ZIO.effectTotal(stream.close())
+              )
+
+            private def outputStream(file: File): ZManaged[Any, Throwable, BufferedOutputStream] =
+              ZManaged.make(ZIO.effect(new BufferedOutputStream(new FileOutputStream(file))))(
+                stream => ZIO.effectTotal(stream.close())
+              )
+
             override def download(
                 link: URL,
                 destination: File
             ): IO[SPodError, Unit] = {
-              //TODO: Wrap resource acquisition and stream creation into IOs
-              //TODO: Is it possible to use SttpClient instead?
-
-              //TODO: Create ProgressBar and report progress
-              val in = new BufferedInputStream(link.openStream)
-              val out = new FileOutputStream(destination)
-              val urlConnection = link.openConnection()
-              try {
-                val totalContentLength = urlConnection.getContentLength
-                val bufferSize = 1024
-                val dataBuffer = new Array[Byte](bufferSize)
-                var bytesRead = 0
-                while (bytesRead != -1) {
-                  bytesRead = in.read(dataBuffer, 0, bufferSize)
-                  if (bytesRead > 0) {
-                    out.write(dataBuffer, 0, bytesRead)
+              inputStream(link).use { in: BufferedInputStream =>
+                outputStream(destination). use { out: BufferedOutputStream =>
+                  //TODO: Wrap the call to get total content length into a ZIO
+                  val urlConnection = link.openConnection()
+                  val totalContentLength = urlConnection.getContentLength
+                  val bufferSize = 1024
+                  val dataBuffer = new Array[Byte](bufferSize)
+                  var bytesRead = 0
+                  while (bytesRead != -1) {
+                    bytesRead = in.read(dataBuffer, 0, bufferSize)
+                    if (bytesRead > 0) {
+                      out.write(dataBuffer, 0, bytesRead)
+                    }
                   }
+                  //TODO: Turn byte chunks read from the input stream into a ZStream
+                  //TODO: Create ProgressBar and report progress
+                  ZIO.succeed()
                 }
-              } catch {
-                case e: IOException =>
-                  IO.fail(new SPodError("Download failed", Some(e)))
-              } finally {
-                if (in != null) in.close()
-                if (out != null) out.close()
-              }
-              // Just a stub, use real IOs inside the method and wrap effects into IOs
-              IO.succeed()
+              }.mapError(error => new SPodError("Failed to download link", Some(error)))
             }
           }
       }
