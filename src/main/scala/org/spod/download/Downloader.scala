@@ -4,9 +4,9 @@ import java.io.{BufferedInputStream, BufferedOutputStream, Closeable, File, File
 import java.net.URL
 
 import org.spod.error.SPodError
-import sttp.client3.httpclient.zio.SttpClient
+import org.spod.progress.ProgressBar
 import zio.blocking.Blocking
-import zio.{Has, IO, Task, ZIO, ZLayer, ZManaged}
+import zio.{Has, IO, Ref, Task, ZIO, ZLayer, ZManaged}
 import zio.console.Console
 import zio.stream.{ZSink, ZStream}
 
@@ -20,8 +20,8 @@ object Downloader {
 
   val live =
     ZLayer
-      .fromServices[Console.Service, SttpClient.Service, Downloader.Service] {
-        (console, sttpClient) =>
+      .fromFunction[Console with Blocking, Downloader.Service] {
+        env =>
           new Service {
 
             private def inputStreamFromLink(link: URL): Task[BufferedInputStream] =
@@ -37,12 +37,17 @@ object Downloader {
                 urlConnection.getContentLength
               }
 
-            private def copy(in: InputStream, out: OutputStream): ZIO[Blocking, IOException, Long] = {
+            private def copy(totalLength: Int, in: InputStream, out: OutputStream): ZIO[Console with Blocking, IOException, Long] = {
+              val progressBar = new ProgressBar(totalLength)
               val source = ZStream.fromInputStream(in)
               val sink = ZSink.fromOutputStream(out)
 
-              //TODO: Create ProgressBar and report progress
-              source.run(sink)
+              val totalProgressRef = Ref.make(0)
+              source.mapChunksM(chunk => for {
+                total <- totalProgressRef
+                total <- total.updateAndGet(x => x + chunk.length)
+                _ <- progressBar.printProgress(total)
+              } yield chunk).run(sink)
             }
 
             override def download(
@@ -53,11 +58,11 @@ object Downloader {
                 in <- ZManaged.make(inputStreamFromLink(link))(close)
                 out <- ZManaged.make(outputStreamToFile(destination))(close)
                 downloadableLength <- contentLength(link).toManaged_
-                _ <- copy(in, out).provideLayer(Blocking.live).toManaged_
+                _ <- copy(downloadableLength, in, out).toManaged_
               } yield ())
                 .mapError(error => new SPodError("Failed to download link", Some(error)))
                 .useNow
-            }
+            }.provide(env)
           }
       }
 

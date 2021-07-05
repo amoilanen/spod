@@ -4,8 +4,8 @@ import java.io.File
 import java.net.URL
 
 import org.spod.download.Downloader
-import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.Runtime
+import zio.blocking.Blocking
 import zio.console
 
 object Download extends App {
@@ -19,7 +19,7 @@ object Download extends App {
   val runtime = Runtime.default
 
   val downloaderEnv =
-    (HttpClientZioBackend.layer() ++ console.Console.live) >>> Downloader.live
+    (Blocking.live ++ console.Console.live) >>> Downloader.live
 
   val downloadUrl = runtime.unsafeRun(
     Downloader.download(url, destinationFile).provideLayer(downloaderEnv)
