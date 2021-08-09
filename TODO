@@ -1,7 +1,7 @@
 Basic functionality:
 
-- It is possible to parse a RSS feed from string
-- It is possible to fetch RSS feed from a hardcoded URL
+- It is possible to parse a RSS feed from string - OK
+- It is possible to fetch RSS feed from a hardcoded URL - OK
 - It is possible to download the episodes from the RSS feed to a hardcoded directory
 - It is possible to display detailed progress information about the RSS feed processing (and file download)
 
