@@ -8,7 +8,7 @@ import zio.Runtime
 import zio.blocking.Blocking
 import zio.console
 
-object Download extends App {
+object DownloaderMain extends App {
 
   val url =
     new URL(
