@@ -3,7 +3,7 @@ package org.spod.rss
 import java.net.URL
 
 import org.spod.error.{FeedFetchError, SPodError}
-import org.spod.rss.RSSFeedParser.RSSFeedParserEnv
+import org.spod.rss.RSSFeedParser.RSSFeedParser
 import sttp.client3.basicRequest
 import sttp.client3.httpclient.zio.SttpClient
 import sttp.model.Uri
@@ -11,13 +11,13 @@ import zio.{Has, IO, ZIO, ZLayer}
 
 object RSSClient {
 
-  type RSSClientEnv = Has[RSSClient.Service]
+  type RSSClient = Has[RSSClient.Service]
 
   trait Service {
     def fetchFeed(url: URL): IO[SPodError, RSSFeed]
   }
 
-  val live: ZLayer[SttpClient with RSSFeedParserEnv, Nothing, RSSClientEnv] =
+  val live: ZLayer[SttpClient with RSSFeedParser, Nothing, RSSClient] =
     ZLayer.fromServices[
       SttpClient.Service,
       RSSFeedParser.Service,
@@ -45,6 +45,6 @@ object RSSClient {
       }
     }
 
-  def fetchFeed(url: URL): ZIO[RSSClientEnv, SPodError, RSSFeed] =
+  def fetchFeed(url: URL): ZIO[RSSClient, SPodError, RSSFeed] =
     ZIO.accessM(_.get.fetchFeed(url))
 }

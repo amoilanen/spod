@@ -2,6 +2,7 @@ package org.spod
 
 import org.spod.error.FeedParserError
 import org.spod.rss.{RSSFeed, RSSFeedParser}
+import zio.blocking.Blocking
 import zio.{Runtime, UIO}
 
 object RSSFeedParserMain extends App {
@@ -32,7 +33,7 @@ object RSSFeedParserMain extends App {
 
   val runtime = Runtime.default
   val parsedFeed: UIO[Either[FeedParserError, RSSFeed]] =
-    RSSFeedParser.parse(feed).provideLayer(RSSFeedParser.live).either
+    RSSFeedParser.parse(feed).provideLayer(Blocking.live >>> RSSFeedParser.live).either
 
   val feedParsingResult = runtime.unsafeRun(parsedFeed)
   println(feedParsingResult)

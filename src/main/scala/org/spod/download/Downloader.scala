@@ -12,7 +12,7 @@ import zio.stream.{ZSink, ZStream}
 
 object Downloader {
 
-  type DownloaderEnv = Has[Downloader.Service]
+  type Downloader = Has[Downloader.Service]
 
   trait Service {
     def download(link: URL, destination: File): IO[SPodError, Unit]
@@ -83,6 +83,6 @@ object Downloader {
   def download(
       link: URL,
       destination: File
-  ): ZIO[DownloaderEnv, SPodError, Unit] =
+  ): ZIO[Downloader, SPodError, Unit] =
     ZIO.accessM(_.get.download(link, destination))
 }
