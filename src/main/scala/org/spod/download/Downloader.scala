@@ -60,14 +60,14 @@ object Downloader {
                       out: OutputStream
                     ): IO[IOException, Long] = {
       val progressBar = new ProgressBar(totalLength)
-      val source = ZStream.fromInputStream(in).provideLayer(ZLayer.succeed(blocking))
-      val sink = ZSink.fromOutputStream(out)
+      val source = ZStream.fromInputStream(in).provide(Has(blocking))
+      val sink = ZSink.fromOutputStream(out).provide(Has(blocking))
 
       Ref.make(0).flatMap({ totalProgressRef =>
         source.mapChunksM(chunk =>
           for {
             total <- totalProgressRef.updateAndGet(_ + chunk.length)
-            _ <- progressBar.printProgress(total).provideLayer(ZLayer.succeed(console))
+            _ <- progressBar.printProgress(total).provide(Has(console))
           } yield chunk
         ).run(sink)
       })
