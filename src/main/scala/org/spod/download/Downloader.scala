@@ -6,10 +6,9 @@ import java.net.URL
 import org.spod.error.SPodError
 import org.spod.progress.ProgressBar
 import zio.blocking.Blocking
-import zio.{Has, IO, RIO, Ref, Task, ZIO, ZLayer, ZManaged}
+import zio.{Has, IO, Ref, Task, UIO, ZIO, ZLayer, ZManaged}
 import zio.console.Console
 import zio.stream.{ZSink, ZStream}
-import zio.blocking._
 
 object Downloader {
 
@@ -19,7 +18,7 @@ object Downloader {
     def download(link: URL, destination: File): IO[SPodError, Unit]
   }
 
-  case class ServiceImpl(env: Console with Blocking) extends Service {
+  case class ServiceImpl(console: Console.Service, blocking: Blocking.Service) extends Service {
     override def download(
                            link: URL,
                            destination: File
@@ -27,8 +26,8 @@ object Downloader {
       (for {
         in <- ZManaged.make(inputStreamFromLink(link))(close)
         out <- ZManaged.make(outputStreamToFile(destination))(close)
-        downloadableLength <- contentLength(link).provide(env).toManaged_
-        _ <- copy(downloadableLength, in, out).provide(env).toManaged_
+        downloadableLength <- contentLength(link).toManaged_
+        _ <- copy(downloadableLength, in, out).toManaged_
       } yield ())
         .mapError(error =>
           new SPodError("Failed to download link", Some(error))
@@ -46,11 +45,11 @@ object Downloader {
                                   ): Task[BufferedOutputStream] =
       ZIO.effect(new BufferedOutputStream(new FileOutputStream(file)))
 
-    private def close(closeable: Closeable) =
+    private def close(closeable: Closeable): UIO[Unit] =
       ZIO.effectTotal(closeable.close())
 
-    private def contentLength(link: URL): RIO[Blocking, Int] =
-      effectBlocking {
+    private def contentLength(link: URL): Task[Int] =
+      blocking.effectBlocking {
         val urlConnection = link.openConnection()
         urlConnection.getContentLength
       }
@@ -59,16 +58,16 @@ object Downloader {
                       totalLength: Int,
                       in: InputStream,
                       out: OutputStream
-                    ): ZIO[Console with Blocking, IOException, Long] = {
+                    ): IO[IOException, Long] = {
       val progressBar = new ProgressBar(totalLength)
-      val source = ZStream.fromInputStream(in)
+      val source = ZStream.fromInputStream(in).provideLayer(ZLayer.succeed(blocking))
       val sink = ZSink.fromOutputStream(out)
 
       Ref.make(0).flatMap({ totalProgressRef =>
         source.mapChunksM(chunk =>
           for {
             total <- totalProgressRef.updateAndGet(_ + chunk.length)
-            _ <- progressBar.printProgress(total)
+            _ <- progressBar.printProgress(total).provideLayer(ZLayer.succeed(console))
           } yield chunk
         ).run(sink)
       })
@@ -77,8 +76,8 @@ object Downloader {
 
   val live =
     ZLayer
-      .fromFunction[Console with Blocking, Downloader.Service] { env =>
-        ServiceImpl(env)
+      .fromServices[Console.Service, Blocking.Service, Downloader.Service] { (console, blocking) =>
+        ServiceImpl(console, blocking)
       }
 
   def download(
