@@ -9,8 +9,7 @@ object RSSFeed {
   def from(xml: Node): ParsingResult[RSSFeed] = {
     val itemsResult = (xml \ "channel" \ "item").map(RSSItem.from(_))
 
-    for {
-      items <- itemsResult.sequence
-    } yield RSSFeed(items.toList)
+    itemsResult.sequence.map(items =>
+      RSSFeed(items.toList))
   }
 }
