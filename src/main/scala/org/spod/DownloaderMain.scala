@@ -18,11 +18,11 @@ object DownloaderMain extends App {
 
   val runtime = Runtime.default
 
-  val downloaderEnv =
+  val downloaderLayer =
     (Blocking.live ++ console.Console.live) >>> Downloader.live
 
   val downloadUrl = runtime.unsafeRun(
-    Downloader.download(url, destinationFile).provideLayer(downloaderEnv)
+    Downloader.download(url, destinationFile).provideLayer(downloaderLayer)
   )
   println(downloadUrl)
 }
